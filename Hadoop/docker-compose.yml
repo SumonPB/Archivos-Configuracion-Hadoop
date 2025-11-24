@@ -1,0 +1,80 @@
+version: "3.8"
+
+services:
+  # 🌐 NameNode (nodo maestro)
+  namenode:
+    build: .
+    container_name: namenode
+    hostname: namenode
+    image: hadoop-custom:latest
+    ports:
+      - "9870:9870" # Web UI HDFS
+      - "8088:8088" # Web UI YARN
+      - "22:22" # SSH
+      - "8020:8020" # RPC HDFS
+    volumes:
+      - namenode-data:/usr/local/hadoop/dfs/name
+      - ./hadoop-conf:/usr/local/hadoop/etc/hadoop
+    environment:
+      - HADOOP_CONF_DIR=/usr/local/hadoop/etc/hadoop
+    networks:
+      hadoop-net:
+        ipv4_address: 172.20.0.2
+    command: [ "/usr/local/bin/start-hadoop.sh" ]
+    tty: true
+
+  # 💾 DataNode 1
+  datanode1:
+    build: .
+    container_name: datanode1
+    hostname: datanode1
+    image: hadoop-custom:latest
+    ports:
+      - "9864:9864" # Web UI DataNode
+      - "9866:9866" # Data transfer
+      - "9867:9867" # IPC
+    volumes:
+      - datanode1-data:/usr/local/hadoop/dfs/data
+      - ./hadoop-conf:/usr/local/hadoop/etc/hadoop
+    depends_on:
+      - namenode
+    networks:
+      hadoop-net:
+        ipv4_address: 172.20.0.3
+    command: [ "/usr/local/bin/start-hadoop.sh" ]
+    tty: true
+
+  # 💾 DataNode 2
+  datanode2:
+    build: .
+    container_name: datanode2
+    hostname: datanode2
+    image: hadoop-custom:latest
+    ports:
+    - "9865:9864" # 🔥 CAMBIAR: 9865 externo → 9864 interno
+    - "9868:9866" # 🔥 CAMBIAR: 9868 externo → 9866 interno
+    - "9869:9867" # 🔥 CAMBIAR: 9869 externo → 9867 interno
+    volumes:
+    - datanode2-data:/usr/local/hadoop/dfs/data
+    - ./hadoop-conf:/usr/local/hadoop/etc/hadoop
+    depends_on:
+    - namenode
+    networks:
+      hadoop-net:
+        ipv4_address: 172.20.0.4
+    command: [ "/usr/local/bin/start-hadoop.sh" ]
+    tty: true
+
+# Volúmenes persistentes para los metadatos y bloques
+volumes:
+  namenode-data:
+  datanode1-data:
+  datanode2-data:
+
+    # Red bridge compartida para la comunicación interna
+networks:
+  hadoop-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
