@@ -2,10 +2,13 @@
 
 FASE 1: CONFIGURACIÓN DEL ENTORNO HADOOP
 
-docker build -t hadoop-custom:latest .
+docker build -t hadoop-custom:latest . O docker build --no-cache -t hadoop-custom:latest .
 docker-compose up -d
-docker cp "C:\Users\SumonBP\Desktop\Uce\8voSem\taller1\taller1\palabras\generar_1gb.py" namenode:/tmp/
+
+docker cp "C:\Users\SumonBP\Desktop\UNI\8voSem\Taller1\Archivos-Configuracion-Hadoop\palabras\generar_1gb.py" namenode:/tmp/
+
 apt-get update && apt-get install -y python3
+
 ls -la /tmp/generar_1gb.py
 
 ==================================================================================================================
@@ -13,12 +16,21 @@ ls -la /tmp/generar_1gb.py
 FASE 2: GENERACIÓN Y CARGA DEL DATASET
 
 python3 /tmp/generar_1gb.py
+
 ls -lh /tmp/archivo_1gb.txt
+
 wc -l /tmp/archivo_1gb.txt
+
 hdfs dfs -mkdir /ejercicio_mapreduce
-hdfs dfs -ls
+
+hdfs dfs -ls /
+
 hdfs dfs -mkdir -p /ejercicio_mapreduce/input
+
+hdfs dfs -ls -R /ejercicio_mapreduce
+
 hdfs dfs -put /tmp/archivo_1gb.txt /ejercicio_mapreduce/input
+
 hdfs dfs -ls -h /ejercicio_mapreduce/input/
 
 ==================================================================================================================
@@ -26,10 +38,15 @@ hdfs dfs -ls -h /ejercicio_mapreduce/input/
 FASE 3: PROCESAMIENTO MAPREDUCE DISTRIBUIDO
 
 docker exec -it namenode bash
+
 mkdir -p /tmp/split_work
+
 cd /tmp/split_work
+
 hdfs dfs -cat /ejercicio_mapreduce/input/* | split -l 1000000 - part_
+
 cd /tmp/split_work/
+
 hdfs dfs -mkdir -p /ejercicio_mapreduce/input_small
 
 for file in part_aa part_ab part_ac part_ad part_ae part_af part_ag part_ah part_ai part_aj part_ak part_al part_am part_an part_ao part_ap part_aq part_ar part_as part_at; do
@@ -43,8 +60,12 @@ for file in part_aa part_ab part_ac part_ad part_ae part_af part_ag part_ah part
     fi
 done
 
+
+
 hdfs dfs -du -h /ejercicio_mapreduce/output_*
+
 hdfs dfs -cat /ejercicio_mapreduce/output_part_aa/part-r-00000 | head -5
+
 hdfs dfs -cat /ejercicio_mapreduce/output_part_ab/part-r-00000 | head -5
 
 ==================================================================================================================
@@ -52,6 +73,7 @@ hdfs dfs -cat /ejercicio_mapreduce/output_part_ab/part-r-00000 | head -5
 FASE 4: COMBINACIÓN DE RESULTADOS
 
 mkdir -p /tmp/final_merge
+
 cd /tmp/final_merge
 
 for part in aa ab ac ad ae af ag ah ai aj ak al am an ao ap aq ar as at; do
@@ -67,7 +89,13 @@ head -10 final_result.txt
 echo "=== Total de palabras únicas: $(wc -l final_result.txt) ==="
 
 hdfs dfs -rm -r /ejercicio_mapreduce/output_final
+
 hdfs dfs -mkdir -p /ejercicio_mapreduce/output_final
+
 hdfs dfs -put final_result.txt /ejercicio_mapreduce/output_final/
+
+hdfs dfs -get -f /ejercicio_mapreduce/output_final/final_result.txt /tmp/
+
+docker cp namenode:/tmp/final_result.txt "C:\Users\SumonBP\Desktop\UNI\8voSem\Taller1\Archivos-Configuracion-Hadoop\"
 
 echo "¡Proceso completado exitosamente!"
